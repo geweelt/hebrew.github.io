@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Learning Hub</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            width: 280px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .tool-card h2 {
+            margin: 10px 0;
+            font-size: 1.5rem;
+        }
+
+        .tool-card p {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            line-height: 1.4;
+        }
+
+        .badge {
+            margin-top: 15px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .bg-blue { background-color: var(--primary); }
+        .bg-green { background-color: var(--secondary); }
+    </style>
+</head>
+<body>
+
+    <h1>Hebrew Learning Lab</h1>
+
+    <div class="container">
+        <a href="Untitled-4.html" class="tool-card">
+            <div class="icon">🗂️</div>
+            <h2>Flashcards</h2>
+            <p>Master vocabulary through spaced repetition and visual memory.</p>
+            <div class="badge bg-blue">Open Flashcards</div>
+        </a>
+
+        <a href="word%20gender.html" class="tool-card">
+            <div class="icon">⚖️</div>
+            <h2>Noun Master</h2>
+            <p>Practice noun genders (m/f) and translation quizzes with dictionary files.</p>
+            <div class="badge bg-green">Open Trainer</div>
+        </a>
+    </div>
+
+    <p style="margin-top: 30px; color: #95a5a6; font-size: 0.8rem;">
+        Ensure all files are in the same folder.
+    </p>
+
+</body>
+</html>
