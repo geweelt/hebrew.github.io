@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Root Quiz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Alef&family=Amatic+SC:wght@700&family=Assistant:wght@400;700&family=David+Libre&family=Frank+Ruhl+Libre&family=Heebo&family=Rubik&family=Secular+One&family=Varela+Round&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #c8e6c9;
+            --success-border: #2e7d32;
+            --error: #ffcdd2;
+            --error-border: #c62828;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 650px;
+        }
+
+        h1 { margin-top: 0; text-align: center; }
+
+        /* Controls Section */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: bold; font-size: 0.9rem; }
+        
+        select, button, input[type="file"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-weight: 600;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+        .btn-secondary { background-color: #95a5a6; }
+
+        /* Toggles */
+        .toggles {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .toggle-item { display: flex; align-items: center; gap: 5px; font-size: 0.9rem; cursor: pointer; }
+
+        /* Quiz Area */
+        .quiz-area { text-align: center; margin-bottom: 20px; min-height: 200px; }
+        
+        #question-word {
+            font-size: 3rem;
+            margin: 20px 0 10px 0;
+            min-height: 60px;
+            direction: rtl; /* Default for Hebrew */
+        }
+
+        .meta-info {
+            color: #7f8c8d;
+            font-style: italic;
+            min-height: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        /* Options Grid */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-btn:hover:not(:disabled) { background-color: #e3f2fd; }
+        
+        .option-btn.correct { background-color: var(--success); border-color: var(--success-border); }
+        .option-btn.wrong { background-color: var(--error); border-color: var(--error-border); color: #721c24; }
+
+        .sub-text { font-size: 0.85rem; color: #666; margin-top: 4px; }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stats { text-align: center; font-style: italic; color: #7f8c8d; font-size: 0.9rem; }
+        
+        /* Utility */
+        .hidden { display: none !important; }
+        
+        /* Font classes for Randomization */
+        .font-alef { font-family: 'Alef', sans-serif; }
+        .font-amatic { font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 1.2em; }
+        .font-assistant { font-family: 'Assistant', sans-serif; }
+        .font-david { font-family: 'David Libre', serif; }
+        .font-frank { font-family: 'Frank Ruhl Libre', serif; }
+        .font-heebo { font-family: 'Heebo', sans-serif; }
+        .font-rubik { font-family: 'Rubik', sans-serif; }
+        .font-secular { font-family: 'Secular One', sans-serif; }
+        .font-varela { font-family: 'Varela Round', sans-serif; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hebrew Root Quiz</h1>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>1. Database (Nouns)</label>
+            <button class="btn btn-secondary" onclick="document.getElementById('file-nouns').click()">📂 Load Nouns CSV</button>
+            <input type="file" id="file-nouns" accept=".csv" class="hidden">
+            <small style="font-size:0.7em; color:#888;">*Try auto-load first, use this if fails.</small>
+        </div>
+        <div class="control-group">
+            <label>2. Filter (Roots)</label>
+            <button class="btn btn-secondary" onclick="document.getElementById('file-roots').click()">📂 Load Roots CSV</button>
+            <input type="file" id="file-roots" accept=".csv" class="hidden">
+        </div>
+        
+        <div class="control-group">
+            <label>Mode</label>
+            <select id="mode-select">
+                <option value="HE_EN">Hebrew → English</option>
+                <option value="EN_HE">English → Hebrew</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Difficulty</label>
+            <select id="difficulty-select">
+                <option value="easy">Easy (Random roots)</option>
+                <option value="medium" selected>Medium (Mix)</option>
+                <option value="hard">Hard (Same root)</option>
+            </select>
+        </div>
+
+        <div class="toggles">
+            <label class="toggle-item"><input type="checkbox" id="toggle-root" checked> Show Root</label>
+            <label class="toggle-item"><input type="checkbox" id="toggle-translit" checked> Show Transliteration</label>
+            <label class="toggle-item"><input type="checkbox" id="toggle-fonts"> Random Fonts</label>
+        </div>
+    </div>
+
+    <div class="stats" id="pool-stats">Waiting for data...</div>
+
+    <div class="quiz-area">
+        <div id="question-word">...</div>
+        <div id="meta-translit" class="meta-info"></div>
+        <div id="meta-root" class="meta-info"></div>
+    </div>
+
+    <div class="options-grid" id="options-container">
+        </div>
+
+    <div class="footer">
+        <button class="btn btn-outline" id="btn-add-dict" disabled>➕ Add Current Word to Custom Dictionary</button>
+        <button class="btn btn-outline" id="btn-download-dict" disabled>⬇ Download Custom Dictionary</button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration & State ---
+    const STATE = {
+        allNouns: [],     // The full DB
+        knownRoots: [],   // User's root list
+        pool: [],         // Filtered words based on roots
+        currentWord: null,
+        customDict: [],
+        fonts: ['font-alef', 'font-amatic', 'font-assistant', 'font-david', 'font-frank', 'font-heebo', 'font-rubik', 'font-secular', 'font-varela']
+    };
+
+    // --- DOM Elements ---
+    const elements = {
+        fileNouns: document.getElementById('file-nouns'),
+        fileRoots: document.getElementById('file-roots'),
+        modeSelect: document.getElementById('mode-select'),
+        diffSelect: document.getElementById('difficulty-select'),
+        toggleRoot: document.getElementById('toggle-root'),
+        toggleTranslit: document.getElementById('toggle-translit'),
+        toggleFonts: document.getElementById('toggle-fonts'),
+        poolStats: document.getElementById('pool-stats'),
+        qWord: document.getElementById('question-word'),
+        metaTrans: document.getElementById('meta-translit'),
+        metaRoot: document.getElementById('meta-root'),
+        optionsContainer: document.getElementById('options-container'),
+        btnAdd: document.getElementById('btn-add-dict'),
+        btnDownload: document.getElementById('btn-download-dict')
+    };
+
+    // --- Initialization ---
+    window.addEventListener('DOMContentLoaded', () => {
+        // Attempt to fetch from server
+        fetch('all_nouns.csv')
+            .then(response => {
+                if(!response.ok) throw new Error("File not found");
+                return response.text();
+            })
+            .then(csv => {
+                STATE.allNouns = parseCSV(csv);
+                updateStatus(`Loaded ${STATE.allNouns.length} nouns from server. Please upload roots.`);
+            })
+            .catch(err => {
+                updateStatus("Could not auto-load 'all_nouns.csv'. Please use the 'Load Nouns CSV' button.");
+            });
+    });
+
+    // --- Event Listeners ---
+    elements.fileNouns.addEventListener('change', (e) => handleFileLoad(e, 'nouns'));
+    elements.fileRoots.addEventListener('change', (e) => handleFileLoad(e, 'roots'));
+    
+    elements.modeSelect.addEventListener('change', nextQuestion);
+    elements.diffSelect.addEventListener('change', () => {}); // Takes effect next Q
+    
+    elements.toggleRoot.addEventListener('change', updateVisibility);
+    elements.toggleTranslit.addEventListener('change', updateVisibility);
+    elements.toggleFonts.addEventListener('change', updateFontStyles);
+
+    elements.btnAdd.addEventListener('click', addToCustomDict);
+    elements.btnDownload.addEventListener('click', downloadCustomDict);
+
+    // --- File Handling ---
+    function handleFileLoad(event, type) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = parseCSV(e.target.result);
+            if (type === 'nouns') {
+                STATE.allNouns = data;
+                updateStatus(`Loaded ${data.length} nouns manually.`);
+            } else if (type === 'roots') {
+                // Assumes roots are in the first column
+                STATE.knownRoots = data.map(row => Object.values(row)[0]).filter(r => r);
+                updateStatus(`Loaded ${STATE.knownRoots.length} roots.`);
+                updatePool();
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Simple CSV Parser (Assumes headers in row 1)
+    function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        return lines.slice(1).map(line => {
+            // Handle simple commas, but ideally use a robust regex for quoted CSVs
+            const values = line.split(','); 
+            let obj = {};
+            headers.forEach((h, i) => {
+                obj[h] = values[i] ? values[i].trim() : '';
+            });
+            return obj;
+        });
+    }
+
+    // --- Game Logic ---
+    function updatePool() {
+        if (!STATE.allNouns.length || !STATE.knownRoots.length) return;
+
+        // Filter nouns where 'Root' exists in knownRoots
+        // Note: CSV headers must match exactly: 'Root', 'Hebrew', 'Meaning', 'Transliteration'
+        STATE.pool = STATE.allNouns.filter(item => STATE.knownRoots.includes(item.Root));
+        
+        elements.poolStats.textContent = `Pool size: ${STATE.pool.length} words (based on ${STATE.knownRoots.length} roots)`;
+        
+        if (STATE.pool.length > 0) {
+            nextQuestion();
+        } else {
+            alert("No words found matching your roots! Check CSV headers.");
+        }
+    }
+
+    function nextQuestion() {
+        if (STATE.pool.length === 0) return;
+
+        // Reset UI
+        elements.btnAdd.disabled = false;
+        elements.optionsContainer.innerHTML = '';
+        
+        // 1. Select Word
+        STATE.currentWord = STATE.pool[Math.floor(Math.random() * STATE.pool.length)];
+        const mode = elements.modeSelect.value;
+        
+        // 2. Setup Question Display
+        setupQuestionDisplay(mode);
+
+        // 3. Generate Options
+        const options = generateDistractors(STATE.currentWord, mode);
+        
+        // 4. Render Options
+        renderOptions(options, mode);
+
+        // 5. Update visibility of hints based on toggles
+        updateVisibility();
+    }
+
+    function setupQuestionDisplay(mode) {
+        const word = STATE.currentWord;
+        
+        // Reset fonts on the main question word
+        elements.qWord.className = ''; 
+
+        if (mode === 'HE_EN') {
+            // Question is Hebrew
+            elements.qWord.textContent = word.Hebrew;
+            if (elements.toggleFonts.checked) applyRandomFont(elements.qWord);
+            
+            elements.metaTrans.textContent = word.Transliteration;
+            elements.metaRoot.textContent = word.Root;
+        } else {
+            // Question is English
+            elements.qWord.textContent = word.Meaning; // English
+            elements.qWord.style.fontFamily = 'inherit'; // Standard font for English
+            
+            elements.metaTrans.textContent = ""; // Translit moves to buttons in this mode
+            elements.metaRoot.textContent = word.Root;
+        }
+    }
+
+    function generateDistractors(correctWord, mode) {
+        const difficulty = elements.diffSelect.value;
+        const all = STATE.allNouns; // We pick distractors from the FULL list, not just known roots
+        
+        let distractors = [];
+        
+        // Helper: get words with same/diff root
+        const sameRoot = all.filter(w => w.Root === correctWord.Root && w.Meaning !== correctWord.Meaning);
+        const diffRoot = all.filter(w => w.Meaning !== correctWord.Meaning); // Simplified for diff root selection
+
+        // Logic based on Python script
+        if (difficulty === 'hard') {
+            // Try to get 3 same root
+            distractors = shuffle(sameRoot).slice(0, 3);
+            // Fill rest with diff root
+            while(distractors.length < 3) {
+                distractors.push(diffRoot[Math.floor(Math.random() * diffRoot.length)]);
+            }
+        } else if (difficulty === 'medium') {
+            // 2 same, 1 diff (total 3 distractors + 1 correct = 4 options)
+            // Or strictly: 2 same root, rest different
+            const sames = shuffle(sameRoot).slice(0, 2);
+            distractors = [...sames];
+            while(distractors.length < 3) {
+                distractors.push(diffRoot[Math.floor(Math.random() * diffRoot.length)]);
+            }
+        } else {
+            // Easy: all different
+            distractors = shuffle(diffRoot).slice(0, 3);
+        }
+
+        // Combine and Shuffle
+        const options = [correctWord, ...distractors];
+        return shuffle(options);
+    }
+
+    function renderOptions(options, mode) {
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            
+            let mainText = "";
+            let subText = "";
+
+            if (mode === 'HE_EN') {
+                // Answers are English
+                mainText = opt.Meaning;
+            } else {
+                // Answers are Hebrew
+                mainText = opt.Hebrew;
+                if (elements.toggleTranslit.checked) {
+                    subText = opt.Transliteration;
+                }
+                // Apply font class if HEBREW answer and Random Fonts ON
+                if (elements.toggleFonts.checked) {
+                    btn.classList.add(STATE.fonts[Math.floor(Math.random() * STATE.fonts.length)]);
+                }
+            }
+
+            btn.innerHTML = `<span>${mainText}</span>${subText ? `<span class="sub-text">${subText}</span>` : ''}`;
+            
+            btn.onclick = () => checkAnswer(btn, opt, mode);
+            elements.optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, option, mode) {
+        const isCorrect = option.Meaning === STATE.currentWord.Meaning;
+        
+        if (isCorrect) {
+            btn.classList.add('correct');
+            setTimeout(nextQuestion, 1000);
+        } else {
+            btn.classList.add('wrong');
+            btn.disabled = true;
+        }
+    }
+
+    // --- UI Helper Functions ---
+    function updateVisibility() {
+        const showRoot = elements.toggleRoot.checked;
+        const showTrans = elements.toggleTranslit.checked;
+        const mode = elements.modeSelect.value;
+
+        // Root Visibility
+        elements.metaRoot.style.visibility = showRoot ? 'visible' : 'hidden';
+
+        // Transliteration Visibility
+        if (mode === 'HE_EN') {
+            // Main label
+            elements.metaTrans.style.visibility = showTrans ? 'visible' : 'hidden';
+        } else {
+            // Update buttons immediately if toggle flips
+            const buttons = document.querySelectorAll('.option-btn .sub-text');
+            buttons.forEach(span => span.style.display = showTrans ? 'block' : 'none');
+            
+            // If turning ON in EN_HE mode, we might need to re-render to inject the spans if they don't exist
+            // simpler approach: just re-render question if toggle changes in EN_HE mode? 
+            // For now, let's assume next question fixes it or we rely on CSS display.
+        }
+    }
+
+    function updateFontStyles() {
+        const mode = elements.modeSelect.value;
+        const useRandom = elements.toggleFonts.checked;
+
+        if (mode === 'HE_EN') {
+            // Apply to Question Word
+            elements.qWord.className = useRandom ? '' : ''; // clear
+            if (useRandom) applyRandomFont(elements.qWord);
+        } else {
+            // Apply to Answer Buttons
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => {
+                btn.className = 'option-btn'; // reset
+                if (useRandom) btn.classList.add(STATE.fonts[Math.floor(Math.random() * STATE.fonts.length)]);
+            });
+        }
+    }
+
+    function applyRandomFont(el) {
+        const randomFont = STATE.fonts[Math.floor(Math.random() * STATE.fonts.length)];
+        el.classList.add(randomFont);
+    }
+
+    function updateStatus(msg) {
+        elements.poolStats.textContent = msg;
+    }
+
+    function shuffle(array) {
+        // Fisher-Yates shuffle
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    // --- Custom Dictionary ---
+    function addToCustomDict() {
+        if (!STATE.currentWord) return;
+        
+        // Avoid duplicates
+        const exists = STATE.customDict.some(w => w.Hebrew === STATE.currentWord.Hebrew);
+        if (!exists) {
+            STATE.customDict.push(STATE.currentWord);
+            elements.btnDownload.disabled = false;
+            elements.btnAdd.textContent = "✔ Added";
+            setTimeout(() => elements.btnAdd.textContent = "➕ Add Current Word to Custom Dictionary", 1500);
+        } else {
+            alert("Already in dictionary");
+        }
+    }
+
+    function downloadCustomDict() {
+        if (STATE.customDict.length === 0) return;
+        
+        const headers = Object.keys(STATE.customDict[0]).join(",");
+        const rows = STATE.customDict.map(obj => Object.values(obj).join(","));
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "my_hebrew_dict.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+</body>
+</html>
