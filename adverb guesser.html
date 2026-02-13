@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Quiz & Manager</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .section {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        h2 { margin-top: 0; font-size: 1.2rem; color: #1e293b; }
+
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .slider-group {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quiz-area { text-align: center; }
+
+        #word-display {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 20px 0;
+            direction: rtl;
+        }
+
+        .answer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        button:hover:not(:disabled) { background: #f1f5f9; }
+        
+        button.correct { background-color: var(--success) !important; color: white; border-color: var(--success); }
+        button.wrong { background-color: var(--danger) !important; color: white; border-color: var(--danger); }
+
+        .details-box {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: left;
+            min-height: 100px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .footer-btns {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="section">
+        <h2>Quiz Settings</h2>
+        <div class="controls-row">
+            <label><input type="radio" name="source" value="jsonl" checked> Full Dictionary</label>
+            <label><input type="radio" name="source" value="csv"> Saved List</label>
+        </div>
+
+        <div id="pop-filters">
+            <div class="slider-group">
+                <label>Min Pop: <span id="min-val">0</span></label>
+                <input type="range" id="min-pop" min="0" max="100" value="0">
+            </div>
+            <div class="slider-group">
+                <label>Max Pop: <span id="max-val">100000</span></label>
+                <input type="range" id="max-pop" min="0" max="100" value="100">
+            </div>
+            <p id="found-count">Words found: 0</p>
+        </div>
+
+        <button onclick="startQuiz()" style="width: 100%; background: var(--primary); color: white;">Start / Restart Quiz</button>
+    </div>
+
+    <div class="quiz-area">
+        <p id="progress">Press Start</p>
+        <div id="word-display">...</div>
+
+        <div class="answer-grid" id="answer-grid">
+            <button onclick="checkAnswer(0)"></button>
+            <button onclick="checkAnswer(1)"></button>
+            <button onclick="checkAnswer(2)"></button>
+            <button onclick="checkAnswer(3)"></button>
+        </div>
+
+        <div class="footer-btns">
+            <label><input type="checkbox" id="auto-next"> Auto-next</label>
+            <div>
+                <button id="btn-skip" onclick="revealAnswer(true)" disabled>Skip</button>
+                <button id="btn-next" onclick="nextQuestion()" disabled>Next ></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" style="margin-top: 20px;">
+        <h2>Word Details</h2>
+        <div id="details" class="details-box">Answer to reveal details...</div>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const SOURCE_FILE = "he_adv.jsonl";
+    const POPULARITY_FILE = "words by popularity.csv";
+    
+    let fullDb = [];
+    let popMap = {};
+    let currentQuizList = [];
+    let currentIndex = 0;
+    let maxFreqLimit = 100000;
+    const logFloor = 1;
+
+    // --- Data Loading ---
+
+    async function loadData() {
+        try {
+            // Load Popularity CSV
+            const popRes = await fetch(POPULARITY_FILE);
+            if (popRes.ok) {
+                const text = await popRes.text();
+                text.split('\n').forEach(line => {
+                    const [word, count] = line.split(',');
+                    if (word && count) popMap[word.trim()] = parseInt(count);
+                });
+            }
+
+            // Load JSONL
+            const res = await fetch(SOURCE_FILE);
+            const text = await res.text();
+            fullDb = text.trim().split('\n').map(line => {
+                const data = JSON.parse(line);
+                const wordClean = data.word.replace(/[\u0591-\u05C7]/g, ""); // Simple regex for nikkud
+                
+                // Extract transliteration
+                let tr = "N/A";
+                if (data.head_templates?.[0]?.args?.tr) tr = data.head_templates[0].args.tr;
+                
+                return {
+                    word: data.word,
+                    clean: wordClean,
+                    transliteration: tr,
+                    definition: data.senses?.[0]?.glosses?.[0] || "Unknown",
+                    etymology: data.etymology_text || "N/A",
+                    forms: data.forms?.map(f => `${f.form} (${f.tags?.join(', ')})`).join('; ') || "",
+                    examples: data.senses?.[0]?.examples || [],
+                    frequency: popMap[wordClean] || 0
+                };
+            });
+
+            maxFreqLimit = Math.max(...fullDb.map(w => w.frequency), 100000);
+            updateCounts();
+        } catch (e) {
+            console.error("Failed to load data files:", e);
+        }
+    }
+
+    // --- Logic ---
+
+    function getLogVal(sliderVal) {
+        if (sliderVal <= 0) return 0;
+        const minLog = Math.log(logFloor);
+        const maxLog = Math.log(maxFreqLimit);
+        const val = Math.exp(minLog + (sliderVal / 100.0) * (maxLog - minLog));
+        return Math.round(val);
+    }
+
+    function updateCounts() {
+        const minF = getLogVal(document.getElementById('min-pop').value);
+        const maxF = getLogVal(document.getElementById('max-pop').value);
+        
+        document.getElementById('min-val').innerText = minF;
+        document.getElementById('max-val').innerText = maxF;
+
+        const count = fullDb.filter(w => w.frequency >= minF && w.frequency <= maxF).length;
+        document.getElementById('found-count').innerText = `Words found: ${count}`;
+    }
+
+    function startQuiz() {
+        const minF = getLogVal(document.getElementById('min-pop').value);
+        const maxF = getLogVal(document.getElementById('max-pop').value);
+        
+        currentQuizList = fullDb.filter(w => w.frequency >= minF && w.frequency <= maxF);
+        
+        if (currentQuizList.length === 0) {
+            alert("No words found for these settings!");
+            return;
+        }
+
+        currentQuizList.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = currentQuizList[currentIndex];
+        document.getElementById('progress').innerText = `Question ${currentIndex + 1}/${currentQuizList.length}`;
+        document.getElementById('word-display').innerText = q.word;
+        document.getElementById('details').style.display = "none";
+        document.getElementById('btn-next').disabled = true;
+        document.getElementById('btn-skip').disabled = false;
+
+        // Generate options
+        const correct = q.definition;
+        const distractors = [];
+        while (distractors.length < 3) {
+            const randW = fullDb[Math.floor(Math.random() * fullDb.length)].definition;
+            if (randW !== correct && !distractors.includes(randW)) distractors.push(randW);
+        }
+
+        const options = [...distractors, correct].sort(() => Math.random() - 0.5);
+        const buttons = document.querySelectorAll('#answer-grid button');
+        
+        buttons.forEach((btn, i) => {
+            btn.innerText = options[i];
+            btn.className = "";
+            btn.disabled = false;
+            btn.dataset.isCorrect = (options[i] === correct);
+        });
+    }
+
+    function checkAnswer(idx) {
+        const buttons = document.querySelectorAll('#answer-grid button');
+        const selected = buttons[idx];
+        
+        if (selected.dataset.isCorrect === "false") {
+            selected.classList.add('wrong');
+        }
+        revealAnswer();
+    }
+
+    function revealAnswer(isSkip = false) {
+        const buttons = document.querySelectorAll('#answer-grid button');
+        const q = currentQuizList[currentIndex];
+
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.isCorrect === "true") btn.classList.add('correct');
+        });
+
+        // Show Details
+        const details = document.getElementById('details');
+        details.style.display = "block";
+        details.innerHTML = `
+            <strong>Transliteration:</strong> ${q.transliteration}<br><br>
+            <strong>Definition:</strong> ${q.definition}<br><br>
+            <strong>Etymology:</strong> ${q.etymology}<br><br>
+            <strong>Forms:</strong> ${q.forms}<br><br>
+            <strong>Examples:</strong><br>
+            ${q.examples.map((ex, i) => `${i+1}. ${ex.text} — ${ex.translation}`).join('<br>')}
+        `;
+
+        document.getElementById('btn-next').disabled = false;
+        document.getElementById('btn-skip').disabled = true;
+
+        if (document.getElementById('auto-next').checked && !isSkip) {
+            setTimeout(nextQuestion, 2000);
+        }
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex >= currentQuizList.length) {
+            alert("Quiz Complete! Restarting...");
+            startQuiz();
+        } else {
+            showQuestion();
+        }
+    }
+
+    // Event Listeners
+    document.getElementById('min-pop').addEventListener('input', updateCounts);
+    document.getElementById('max-pop').addEventListener('input', updateCounts);
+
+    // Init
+    loadData();
+</script>
+
+</body>
+</html>
