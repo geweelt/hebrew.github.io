@@ -3,88 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hebrew Verb Quiz</title>
+    <title>Hebrew Verb Quiz Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap');
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .hebrew-text { direction: rtl; }
         .hidden { display: none; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f3f4f6; }
-        /* Simple spinner for loading state */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
+        table { border-collapse: collapse; width: 100%; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; }
+        th { background-color: #f8fafc; color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body class="bg-slate-50 min-h-screen p-4">
 
-    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
-        <h1 class="text-3xl font-bold text-center text-blue-800 mb-6">Hebrew Verb Quiz</h1>
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+        <h1 class="text-3xl font-black text-center text-slate-800 mb-8 tracking-tight">Hebrew Verb Quiz</h1>
 
-        <div id="loading-overlay" class="flex flex-col items-center justify-center p-10">
+        <div id="loading-overlay" class="flex flex-col items-center justify-center py-20">
             <div class="loader mb-4"></div>
-            <p class="text-gray-600">Fetching data files from server...</p>
+            <p class="text-slate-500 font-medium">Synchronizing with server data...</p>
         </div>
 
         <div id="main-interface" class="hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 
-                <div class="space-y-6">
-                    <section>
-                        <h3 class="font-bold border-b mb-2 text-gray-800">Quiz Mode</h3>
-                        <div class="space-y-1">
-                            <label class="flex items-center"><input type="radio" name="mode" value="he-en" checked class="mr-2"> Hebrew → English</label>
-                            <label class="flex items-center"><input type="radio" name="mode" value="en-he" class="mr-2"> English → Hebrew</label>
+                <div class="lg:col-span-1 space-y-6">
+                    <section class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h3 class="font-bold text-slate-700 mb-3 text-sm uppercase tracking-wider">Quiz Mode</h3>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-2 bg-white rounded border cursor-pointer hover:bg-blue-50 transition">
+                                <input type="radio" name="mode" value="he-en" checked class="mr-3 w-4 h-4"> 
+                                <span class="text-sm font-medium">Hebrew → English</span>
+                            </label>
+                            <label class="flex items-center p-2 bg-white rounded border cursor-pointer hover:bg-blue-50 transition">
+                                <input type="radio" name="mode" value="en-he" class="mr-3 w-4 h-4"> 
+                                <span class="text-sm font-medium">English → Hebrew</span>
+                            </label>
                         </div>
                     </section>
 
-                    <section>
-                        <h3 class="font-bold border-b mb-2 text-gray-800">Allowed Forms (He→En)</h3>
-                        <div id="form-vars" class="grid grid-cols-2 gap-1">
-                            <label class="text-sm"><input type="checkbox" value="infinitive" checked> infinitive</label>
-                            <label class="text-sm"><input type="checkbox" value="past"> past</label>
-                            <label class="text-sm"><input type="checkbox" value="present"> present</label>
-                            <label class="text-sm"><input type="checkbox" value="future"> future</label>
-                            <label class="text-sm"><input type="checkbox" value="imperative"> imperative</label>
-                            <label class="text-sm"><input type="checkbox" value="participle"> participle</label>
+                    <section class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h3 class="font-bold text-slate-700 mb-3 text-sm uppercase tracking-wider">Allowed Forms</h3>
+                        <div id="form-vars" class="grid grid-cols-1 gap-1">
+                            <label class="flex items-center text-sm"><input type="checkbox" value="infinitive" checked class="mr-2"> infinitive</label>
+                            <label class="flex items-center text-sm"><input type="checkbox" value="past" class="mr-2"> past</label>
+                            <label class="flex items-center text-sm"><input type="checkbox" value="present" class="mr-2"> present</label>
+                            <label class="flex items-center text-sm"><input type="checkbox" value="future" class="mr-2"> future</label>
+                            <label class="flex items-center text-sm"><input type="checkbox" value="imperative" class="mr-2"> imperative</label>
                         </div>
                     </section>
 
-                    <section>
-                        <h3 class="font-bold border-b mb-2 text-gray-800">Popularity (Log Scale)</h3>
-                        <div class="bg-blue-50 p-3 rounded">
-                            <label class="block text-xs font-semibold">Min: <span id="min-val">0</span></label>
-                            <input type="range" id="min-slider" min="0" max="7" step="0.1" value="0" class="w-full">
-                            <label class="block text-xs font-semibold mt-2">Max: <span id="max-val">7</span></label>
-                            <input type="range" id="max-slider" min="0" max="7" step="0.1" value="7" class="w-full">
-                            <p id="stats-label" class="text-xs text-blue-700 mt-2 font-bold">0 verbs match filter</p>
+                    <section class="bg-blue-600 p-4 rounded-xl text-white shadow-lg shadow-blue-200">
+                        <h3 class="font-bold mb-3 text-sm uppercase tracking-wider">Popularity (Log10)</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><span>Min Freq</span><span id="min-val">0</span></div>
+                                <input type="range" id="min-slider" min="0" max="7" step="0.1" value="0" class="w-full accent-blue-200">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><span>Max Freq</span><span id="max-val">7</span></div>
+                                <input type="range" id="max-slider" min="0" max="7" step="0.1" value="7" class="w-full accent-blue-200">
+                            </div>
+                            <p id="stats-label" class="text-xs font-bold bg-blue-700 p-2 rounded text-center">0 verbs match</p>
                         </div>
                     </section>
                 </div>
 
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="text-center p-8 bg-gray-50 rounded-lg border-2 border-gray-100 min-h-[300px] flex flex-col justify-center">
-                        <div id="question-text" class="text-3xl font-bold mb-8">Loading...</div>
-                        <div id="answer-grid" class="grid grid-cols-1 gap-3"></div>
+                <div class="lg:col-span-3 space-y-6">
+                    <div class="relative bg-white border-2 border-slate-100 rounded-2xl p-8 min-h-[350px] flex flex-col items-center justify-center shadow-sm">
+                        <div id="question-text" class="text-4xl font-bold mb-10 text-slate-800"></div>
+                        <div id="answer-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl"></div>
                     </div>
 
-                    <div class="flex flex-wrap justify-center gap-4">
-                        <label class="flex items-center text-sm font-medium"><input type="checkbox" id="auto-next" class="mr-2"> Auto Next</label>
-                        <button onclick="showCorrect()" class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300 font-semibold transition">Show Correct</button>
-                        <button onclick="nextQuestion()" class="px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition">Next</button>
+                    <div class="flex flex-wrap items-center justify-center gap-6 bg-slate-50 p-4 rounded-xl">
+                        <label class="flex items-center text-slate-600 font-semibold cursor-pointer">
+                            <input type="checkbox" id="auto-next" class="mr-2 w-4 h-4"> Auto Next
+                        </label>
+                        <button onclick="showCorrect()" class="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-bold transition">Show Correct</button>
+                        <button onclick="nextQuestion()" class="px-10 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 transition">Next Question</button>
                     </div>
 
-                    <div id="conjugation-section" class="hidden border-t-2 border-gray-100 pt-6">
-                        <div class="bg-blue-900 text-white rounded-t-lg py-2 px-4 flex justify-between items-center">
-                            <h2 id="root-display" class="font-bold"></h2>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs uppercase">Zoom</span>
-                                <input type="range" id="zoom-slider" min="14" max="32" value="18" class="w-24 accent-blue-400">
+                    <div id="conjugation-section" class="hidden animate-in fade-in duration-500">
+                        <div class="bg-slate-800 text-white rounded-t-xl py-3 px-6 flex justify-between items-center">
+                            <h2 id="root-display" class="font-bold tracking-widest uppercase text-sm"></h2>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] uppercase font-bold text-slate-400">Zoom</span>
+                                <input type="range" id="zoom-slider" min="16" max="36" value="20" class="w-24 accent-blue-500">
                             </div>
                         </div>
-                        <div id="tables-container" class="bg-white border p-4 space-y-8 overflow-x-auto rounded-b-lg"></div>
+                        <div id="tables-container" class="bg-white border-2 border-slate-800 border-t-0 p-6 space-y-10 overflow-x-auto rounded-b-xl"></div>
                     </div>
                 </div>
             </div>
@@ -92,7 +102,7 @@
     </div>
 
     <script>
-        // --- Configuration ---
+        // --- Config ---
         const JSONL_URL = 'he_verbs.jsonl';
         const CSV_URL = 'words by popularity.csv';
 
@@ -104,58 +114,18 @@
         let currentCorrect = "";
         let isLocked = false;
 
-        // --- Initialization ---
-        window.onload = init;
-
-        async function init() {
-            try {
-                const [jsonlRes, csvRes] = await Promise.all([
-                    fetch(JSONL_URL),
-                    fetch(CSV_URL)
-                ]);
-
-                if (!jsonlRes.ok || !csvRes.ok) throw new Error("Could not find data files on server.");
-
-                // Process CSV
-                const csvText = await csvRes.text();
-                csvText.split(/\r?\n/).forEach(line => {
-                    const parts = line.split(',');
-                    if (parts.length >= 2) {
-                        const word = parts[0].replace(/^"|"$/g, '').trim();
-                        const freq = parseInt(parts[1]);
-                        if (!isNaN(freq)) popularityMap[word] = freq;
-                    }
-                });
-
-                // Process JSONL
-                const jsonlText = await jsonlRes.text();
-                allEntries = jsonlText.split('\n')
-                    .filter(line => line.trim())
-                    .map(line => {
-                        try { return JSON.parse(line); } 
-                        catch(e) { return null; }
-                    })
-                    .filter(e => e && e.pos === 'verb');
-
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-interface').classList.remove('hidden');
-                
-                applyFilter();
-                nextQuestion();
-            } catch (err) {
-                document.getElementById('loading-overlay').innerHTML = 
-                    `<p class="text-red-600 font-bold">Error: ${err.message}</p>
-                     <p class="text-sm text-gray-500 mt-2">Ensure files are in the same folder as this HTML file.</p>`;
-            }
+        // --- Helpers ---
+        function stripNikkud(text) {
+            if (!text) return "";
+            return text.replace(/[\u0591-\u05C7]/g, "");
         }
 
-        // --- Core Helpers ---
         const getInfinitive = (entry) => {
             const forms = entry.forms || [];
-            let inf = forms.find(f => (f.tags || []).includes("infinitive"));
+            const inf = forms.find(f => (f.tags || []).includes("infinitive"));
             if (inf) return inf.form;
-            inf = forms.find(f => f.form.startsWith("ל"));
-            return inf ? inf.form : null;
+            const startsWithL = forms.find(f => f.form.startsWith("ל"));
+            return startsWithL ? startsWithL.form : null;
         };
 
         const getRoot = (entry) => {
@@ -168,65 +138,82 @@
             return entry.senses?.[0]?.glosses?.[0] || entry.senses?.[0]?.definitions?.[0] || "Unknown";
         };
 
-        // --- Logic ---
+        // --- Data Loading ---
+        async function init() {
+            try {
+                const [jsonlRes, csvRes] = await Promise.all([fetch(JSONL_URL), fetch(CSV_URL)]);
+                if (!jsonlRes.ok || !csvRes.ok) throw new Error("Data files missing on server.");
+
+                const csvText = await csvRes.text();
+                csvText.split(/\r?\n/).forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const word = stripNikkud(parts[0].replace(/^"|"$/g, '').trim());
+                        const freq = parseInt(parts[1]);
+                        if (!isNaN(freq)) popularityMap[word] = Math.max(popularityMap[word] || 0, freq);
+                    }
+                });
+
+                const jsonlText = await jsonlRes.text();
+                allEntries = jsonlText.split('\n')
+                    .filter(line => line.trim())
+                    .map(line => { try { return JSON.parse(line); } catch(e) { return null; }})
+                    .filter(e => e && e.pos === 'verb');
+
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('main-interface').classList.remove('hidden');
+                
+                applyFilter();
+                nextQuestion();
+            } catch (err) {
+                document.getElementById('loading-overlay').innerHTML = `<p class="text-red-500 font-bold">Error: ${err.message}</p>`;
+            }
+        }
+
+        // --- Core Logic ---
         function applyFilter() {
-            const minLog = parseFloat(document.getElementById('min-slider').value);
-            const maxLog = parseFloat(document.getElementById('max-slider').value);
-            const minVal = Math.pow(10, minLog);
-            const maxVal = Math.pow(10, maxLog);
+            const minVal = Math.pow(10, parseFloat(document.getElementById('min-slider').value));
+            const maxVal = Math.pow(10, parseFloat(document.getElementById('max-slider').value));
 
             document.getElementById('min-val').innerText = Math.floor(minVal).toLocaleString();
             document.getElementById('max-val').innerText = Math.floor(maxVal).toLocaleString();
 
             filteredEntries = allEntries.filter(e => {
                 const inf = getInfinitive(e);
-                const count = popularityMap[inf] || 0;
+                if (!inf) return false;
+                const count = popularityMap[stripNikkud(inf)] || 0;
                 return count >= minVal && count <= maxVal;
             });
 
-            document.getElementById('stats-label').innerText = `${filteredEntries.length} verbs match filter`;
+            document.getElementById('stats-label').innerText = `${filteredEntries.length} verbs found`;
         }
 
         document.getElementById('min-slider').oninput = applyFilter;
         document.getElementById('max-slider').oninput = applyFilter;
 
         function nextQuestion() {
-            if (filteredEntries.length === 0) {
-                alert("No verbs match this popularity range.");
-                return;
-            }
+            if (filteredEntries.length === 0) return alert("Adjust range - no verbs found.");
             
             isLocked = false;
             currentEntry = filteredEntries[Math.floor(Math.random() * filteredEntries.length)];
             const mode = document.querySelector('input[name="mode"]:checked').value;
-            const root = getRoot(currentEntry);
-
             document.getElementById('conjugation-section').classList.add('hidden');
             
             if (mode === "he-en") {
-                const allowedTags = Array.from(document.querySelectorAll('#form-vars input:checked')).map(i => i.value);
-                let forms = (currentEntry.forms || [])
-                    .filter(f => f.tags.some(t => allowedTags.includes(t)))
-                    .map(f => f.form);
-                
+                const allowed = Array.from(document.querySelectorAll('#form-vars input:checked')).map(i => i.value);
+                let forms = (currentEntry.forms || []).filter(f => f.tags.some(t => allowed.includes(t))).map(f => f.form);
                 if (forms.length === 0) forms = [getInfinitive(currentEntry)];
                 
-                const question = forms[Math.floor(Math.random() * forms.length)];
                 currentCorrect = getGloss(currentEntry);
-                displayQuestion(question, buildVariants(currentCorrect, 'en'), "hebrew-text");
+                displayQuestion(forms[Math.floor(Math.random() * forms.length)], buildVariants(currentCorrect, 'en'), "hebrew-text");
             } else {
-                const question = getGloss(currentEntry);
                 currentCorrect = getInfinitive(currentEntry);
-                displayQuestion(question, buildVariants(currentCorrect, 'he'), "hebrew-text");
+                displayQuestion(getGloss(currentEntry), buildVariants(currentCorrect, 'he'), "hebrew-text");
             }
         }
 
         function buildVariants(correct, type) {
-            let pool = (type === 'en') 
-                ? allEntries.map(e => getGloss(e)) 
-                : allEntries.map(e => getInfinitive(e));
-            
-            pool = [...new Set(pool.filter(v => v && v !== correct))];
+            let pool = [...new Set(allEntries.map(e => type === 'en' ? getGloss(e) : getInfinitive(e)).filter(v => v && v !== correct))];
             const selected = pool.sort(() => 0.5 - Math.random()).slice(0, 3);
             selected.push(correct);
             return selected.sort(() => 0.5 - Math.random());
@@ -235,13 +222,13 @@
         function displayQuestion(q, variants, cls) {
             const qEl = document.getElementById('question-text');
             qEl.innerText = q;
-            qEl.className = `text-3xl font-bold mb-8 ${cls}`;
-
+            qEl.className = `text-5xl font-bold mb-10 text-slate-800 ${cls}`;
+            
             const grid = document.getElementById('answer-grid');
             grid.innerHTML = '';
             variants.forEach(v => {
                 const btn = document.createElement('button');
-                btn.className = "p-4 border-2 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-lg font-medium bg-white";
+                btn.className = "p-5 border-2 border-slate-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all font-semibold text-slate-700 bg-white shadow-sm";
                 btn.innerText = v;
                 btn.onclick = () => checkAnswer(v, btn);
                 grid.appendChild(btn);
@@ -251,30 +238,27 @@
         function checkAnswer(selected, btn) {
             if (isLocked) return;
             if (selected === currentCorrect) {
-                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                btn.className = "p-5 border-2 border-green-500 bg-green-50 rounded-xl font-bold text-green-700 shadow-inner";
                 showTables();
                 isLocked = true;
                 if (document.getElementById('auto-next').checked) setTimeout(nextQuestion, 1800);
             } else {
-                btn.classList.add('bg-red-50', 'text-red-300', 'border-red-100');
+                btn.className = "p-5 border-2 border-red-50 bg-red-50 rounded-xl font-bold text-red-200 cursor-not-allowed shadow-none";
             }
         }
 
         function showCorrect() {
             showTables();
             isLocked = true;
-            const buttons = document.querySelectorAll('#answer-grid button');
-            buttons.forEach(b => {
-                if(b.innerText === currentCorrect) b.classList.add('bg-green-100', 'border-green-500');
+            document.querySelectorAll('#answer-grid button').forEach(b => {
+                if(b.innerText === currentCorrect) b.className = "p-5 border-2 border-green-500 bg-green-50 rounded-xl font-bold text-green-700";
             });
         }
 
         function showTables() {
             const container = document.getElementById('tables-container');
-            const section = document.getElementById('conjugation-section');
             container.innerHTML = '';
-            section.classList.remove('hidden');
-            
+            document.getElementById('conjugation-section').classList.remove('hidden');
             document.getElementById('root-display').innerText = `Root: ${getRoot(currentEntry)}`;
             
             const tenses = { "Past": {}, "Present": {}, "Future": {}, "Imperative": {} };
@@ -282,19 +266,14 @@
                 const t = f.tags || [];
                 let tense = t.includes("past") ? "Past" : t.includes("present") ? "Present" : t.includes("future") ? "Future" : t.includes("imperative") ? "Imperative" : null;
                 if (!tense) return;
-                
-                const person = t.includes("first-person") ? "1" : t.includes("second-person") ? "2" : "3";
-                const number = t.includes("singular") ? "S" : "P";
-                const gender = t.includes("masculine") ? "M" : t.includes("feminine") ? "F" : "";
-                tenses[tense][`${person}${number}${gender}`] = f.form;
+                const key = `${t.includes("first-person")?"1":t.includes("second-person")?"2":"3"}${t.includes("singular")?"S":"P"}${t.includes("masculine")?"M":t.includes("feminine")?"F":""}`;
+                tenses[tense][key] = f.form;
             });
 
             Object.entries(tenses).forEach(([name, data]) => {
                 if (Object.keys(data).length === 0) return;
                 const wrapper = document.createElement('div');
-                wrapper.innerHTML = `<h4 class="font-bold text-gray-500 text-sm uppercase mb-2 tracking-widest">${name}</h4>`;
-                
-                let html = '<table>';
+                let html = `<h4 class="font-black text-slate-400 text-[10px] tracking-[0.2em] uppercase mb-4 text-center">${name}</h4><table>`;
                 if (name === "Past" || name === "Future") {
                     html += `<tr><th>I</th><td class="hebrew-text font-bold">${data['1SM'] || ''}</td><th>We</th><td class="hebrew-text font-bold">${data['1PM'] || ''}</td></tr>
                              <tr><th>You (m)</th><td class="hebrew-text font-bold">${data['2SM'] || ''}</td><th>You (m.p)</th><td class="hebrew-text font-bold">${data['2PM'] || ''}</td></tr>
@@ -304,14 +283,13 @@
                 } else {
                     html += `<tr><th>M Sing.</th><th>F Sing.</th><th>M Plur.</th><th>F Plur.</th></tr>
                              <tr>
-                                <td class="hebrew-text font-bold">${data['1SM'] || data['2SM'] || data['3SM'] || ''}</td>
-                                <td class="hebrew-text">${data['1SF'] || data['2SF'] || data['3SF'] || ''}</td>
-                                <td class="hebrew-text font-bold">${data['1PM'] || data['2PM'] || data['3PM'] || ''}</td>
-                                <td class="hebrew-text">${data['1PF'] || data['2PF'] || data['3PF'] || ''}</td>
+                                <td class="hebrew-text font-bold text-blue-600">${data['1SM'] || data['2SM'] || data['3SM'] || ''}</td>
+                                <td class="hebrew-text font-bold text-pink-600">${data['1SF'] || data['2SF'] || data['3SF'] || ''}</td>
+                                <td class="hebrew-text font-bold text-blue-800">${data['1PM'] || data['2PM'] || data['3PM'] || ''}</td>
+                                <td class="hebrew-text font-bold text-pink-800">${data['1PF'] || data['2PF'] || data['3PF'] || ''}</td>
                              </tr>`;
                 }
-                html += '</table>';
-                wrapper.innerHTML += html;
+                wrapper.innerHTML = html + '</table>';
                 container.appendChild(wrapper);
             });
             updateZoom();
@@ -319,11 +297,11 @@
 
         function updateZoom() {
             const size = document.getElementById('zoom-slider').value;
-            document.querySelectorAll('.hebrew-text').forEach(el => {
-                el.style.fontSize = size + 'px';
-            });
+            document.querySelectorAll('.hebrew-text').forEach(el => el.style.fontSize = size + 'px');
         }
         document.getElementById('zoom-slider').oninput = updateZoom;
+
+        window.onload = init;
     </script>
 </body>
 </html>
