@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Vocabulary Trainer - Web</title>
+    <style>
+        :root {
+            --bg-main: #1a1a1a;
+            --bg-side: #2b2b2b;
+            --bg-terminal: #0a0a0a;
+            --text-main: #ffffff;
+            --accent: #3b82f6;
+            --correct: #00FF00;
+            --incorrect: #FF0000;
+            --dim: #BBBBBB;
+        }
+@media (max-width: 768px) {
+    /* Stack elements vertically */
+    .main-container {
+        flex-direction: column;
+        display: flex;
+        height: auto; /* Allow the page to grow long */
+        overflow-y: auto; /* Enable scrolling for the whole page */
+    }
+
+    /* Config at the top */
+    .left-panel {
+        order: 1; 
+        width: 100%;
+        height: auto;
+        min-height: 400px;
+    }
+
+    /* Quiz at the bottom */
+    .right-panel {
+        order: 2;
+        width: 100%;
+        height: 600px; /* Give the terminal a fixed height so it's usable */
+        border-top: 3px solid #3b82f6; /* Visual separator */
+    }
+
+    /* Extra padding for that hosting banner at the very bottom */
+    .right-panel {
+        padding-bottom: 100px; 
+    }
+}
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main); color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .main-container { display: flex; height: 100vh; box-sizing: border-box; /* Ensures padding doesn't break the height */
+    padding-bottom: 55px;   /* Set this to be slightly taller than the banner */}
+
+        /* Left Panel */
+        .left-panel {
+            width: 450px; background: var(--bg-side);
+            display: flex; flex-direction: column;
+            border-right: 2px solid #333;
+        }
+
+        .config-section { padding: 20px; flex: 1; overflow-y: auto; }
+        .preview-section { height: 30%; border-top: 2px solid #444; overflow: auto; background: #222; }
+
+        /* Mapping UI */
+        .mapping-row {
+            display: flex; align-items: center; margin-bottom: 8px; gap: 10px;
+        }
+        .mapping-row input, .mapping-row select {
+            background: #3d3d3d; color: white; border: 1px solid #555;
+            padding: 5px; border-radius: 4px; flex: 1;
+        }
+        .mapping-row label { width: 120px; font-size: 0.9em; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #444; padding: 4px; text-align: left; }
+        th { background: #333; position: sticky; top: 0; }
+
+        /* Right Panel (Terminal) */
+        .right-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg-terminal); }
+
+        #console {
+            height: 400px; /* Fixed height for the terminal log */
+            overflow-y: auto;
+            background: var(--bg-terminal);
+        }
+
+        .input-area {
+            /* This keeps the input visible even if the user scrolls */
+            position: sticky;
+            bottom: 80px; /* Matches your banner clearance */
+            background: #111;
+            z-index: 99;
+        }
+
+        #user-input {
+            flex: 1; background: #1a1a1a; border: 1px solid #444; color: white;
+            padding: 12px; font-size: 18px; border-radius: 4px;
+        }
+
+        /* Buttons */
+        button {
+            cursor: pointer; background: var(--accent); color: white;
+            border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold;
+        }
+        button:hover { opacity: 0.8; }
+        .btn-start { background: #28a745; width: 100%; margin-top: 15px; padding: 12px; }
+        
+        .tag-correct { color: var(--correct); }
+        .tag-incorrect { color: var(--incorrect); }
+        .tag-white { color: var(--dim); }
+        .tag-hebrew { direction: rtl; unicode-bidi: bidi-override; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="left-panel">
+        <div class="config-section">
+            <h3>CONFIG & MAPPING</h3>
+            <input type="file" id="csv-file" accept=".csv" style="display:none">
+            <button onclick="document.getElementById('csv-file').click()">📂 Load CSV File</button>
+            
+            <div style="margin: 15px 0;">
+                <label>Start Row #:</label>
+                <input type="number" id="start-row" value="1" style="width: 60px; background:#333; color:white; border:1px solid #555;">
+            </div>
+
+            <div id="mapping-container">
+                </div>
+            
+            <button class="btn-start" onclick="startQuiz()">🚀 START SESSION & SAVE CONFIG</button>
+        </div>
+
+        <div class="preview-section" id="preview-table-container">
+            <table id="preview-table"><thead><tr id="table-headers"></tr></thead><tbody id="table-body"></tbody></table>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div id="console"></div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Type answer..." autocomplete="off">
+            <button onclick="changeFontSize(2)">+</button>
+            <button onclick="changeFontSize(-2)">-</button>
+            <button onclick="processAnswer()">EXECUTE</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let rawCsvData = [];
+    let wordlist = {};
+    let currentWordData = null;
+    let currentHeb = "";
+    let fontSize = 18;
+    let currentFileName = "";
+
+    const fields = ["Hebrew Word", "Transliteration", "Translation 1", "Translation 2", 
+                    "Custom Field 1", "Custom Field 2", "Custom Field 3", "Custom Field 4", 
+                    "Custom Field 5", "Custom Field 6", "Custom Field 7", "Custom Field 8", "Custom Field 9"];
+
+    // --- File Loading ---
+    document.getElementById('csv-file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentFileName = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            rawCsvData = parseCSV(text);
+            generateMappingUI();
+            updatePreviewTable();
+            loadSavedConfig();
+        };
+        reader.readAsText(file);
+    });
+
+    function parseCSV(text) {
+        return text.split('\n').map(row => {
+            // Simple split, handles basic CSV. For complex CSV, a library like PapaParse is better.
+            return row.split(',').map(cell => cell.trim());
+        }).filter(row => row.length > 1 || row[0] !== "");
+    }
+
+    // --- UI Generation ---
+    function generateMappingUI() {
+        const container = document.getElementById('mapping-container');
+        container.innerHTML = "<h4>Define Columns</h4>";
+        
+        const colOptions = ["None", ...rawCsvData[0].map((_, i) => `Col ${i}`)];
+
+        fields.forEach(field => {
+            const div = document.createElement('div');
+            div.className = 'mapping-row';
+            
+            let labelHtml = "";
+            if (field.includes("Custom Field")) {
+                labelHtml = `<input type="text" id="label-${field}" placeholder="Label Name..." class="custom-label">`;
+            } else {
+                labelHtml = `<label>${field}</label>`;
+            }
+
+            const selectHtml = `<select id="menu-${field}">
+                ${colOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>`;
+
+            div.innerHTML = labelHtml + selectHtml;
+            container.appendChild(div);
+        });
+    }
+
+    function updatePreviewTable() {
+        const headerRow = document.getElementById('table-headers');
+        const body = document.getElementById('table-body');
+        headerRow.innerHTML = "<th>#</th>" + rawCsvData[0].map((_, i) => `<th>Col ${i}</th>`).join('');
+        
+        body.innerHTML = rawCsvData.slice(0, 500).map((row, idx) => `
+            <tr>
+                <td>${idx + 1}</td>
+                ${row.map(cell => `<td>${cell}</td>`).join('')}
+            </tr>
+        `).join('');
+    }
+
+    // --- Config Logic ---
+    function saveCurrentConfig() {
+        const config = { menus: {}, labels: {} };
+        fields.forEach(f => {
+            config.menus[f] = document.getElementById(`menu-${f}`).value;
+            if (f.includes("Custom Field")) {
+                config.labels[f] = document.getElementById(`label-${f}`).value;
+            }
+        });
+        localStorage.setItem(`config_${currentFileName}`, JSON.stringify(config));
+    }
+
+    function loadSavedConfig() {
+        const saved = localStorage.getItem(`config_${currentFileName}`);
+        if (!saved) return;
+        const config = JSON.parse(saved);
+        fields.forEach(f => {
+            if (config.menus[f]) document.getElementById(`menu-${f}`).value = config.menus[f];
+            if (f.includes("Custom Field") && config.labels[f]) {
+                document.getElementById(`label-${f}`).value = config.labels[f];
+            }
+        });
+    }
+
+    // --- Quiz Logic ---
+    function log(text, className = "") {
+        const consoleEl = document.getElementById('console');
+        const entry = document.createElement('div');
+        entry.className = className;
+        entry.textContent = text;
+        consoleEl.appendChild(entry);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function startQuiz() {
+        saveCurrentConfig();
+        wordlist = {};
+        const startRowIdx = parseInt(document.getElementById('start-row').value) - 1;
+        const filteredData = rawCsvData.slice(Math.max(0, startRowIdx));
+
+        const getIdx = (key) => {
+            const val = document.getElementById(`menu-${key}`).value;
+            return val === "None" ? null : parseInt(val.split(" ")[1]);
+        };
+
+        filteredData.forEach(row => {
+            const hIdx = getIdx("Hebrew Word");
+            if (hIdx === null || !row[hIdx]) return;
+
+            let answers = [];
+            ["Translation 1", "Translation 2"].forEach(k => {
+                const idx = getIdx(k);
+                if (idx !== null && row[idx]) answers.push(row[idx].toLowerCase().trim());
+            });
+
+            let extras = [];
+            for (let i = 1; i <= 9; i++) {
+                const key = `Custom Field ${i}`;
+                const idx = getIdx(key);
+                if (idx !== null && row[idx]) {
+                    const label = document.getElementById(`label-${key}`).value || `Field ${i}`;
+                    extras.push(`${label}: ${row[idx]}`);
+                }
+            }
+
+            const tIdx = getIdx("Transliteration");
+            wordlist[row[hIdx]] = {
+                translit: tIdx !== null ? row[tIdx] : "",
+                answers: answers,
+                extras: extras
+            };
+        });
+
+        log("SESSION READY. CONFIG SAVED.");
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        const keys = Object.keys(wordlist);
+        if (keys.length === 0) return;
+        currentHeb = keys[Math.floor(Math.random() * keys.length)];
+        currentWordData = wordlist[currentHeb];
+        
+        log(`\n<< ${currentHeb} (${currentWordData.translit})`);
+    }
+
+    function processAnswer() {
+        const inputField = document.getElementById('user-input');
+        const ans = inputField.value.toLowerCase().trim();
+        inputField.value = "";
+
+        if (!currentWordData) return;
+
+        if (ans === "" || currentWordData.answers.includes(ans)) {
+            if (ans !== "") {
+                log(`>> ${ans}`, "tag-white");
+                log(`   [CORRECT]`, "tag-correct");
+                currentWordData.extras.forEach(ex => log(`   ${ex}`, "tag-correct"));
+            } else {
+                log(`>> [REVEAL]`, "tag-white");
+                log(`   ${currentWordData.answers.join(', ')}`, "tag-white");
+                currentWordData.extras.forEach(ex => log(`   ${ex}`, "tag-white"));
+            }
+            nextQuestion();
+        } else {
+            log(`>> ${ans}`, "tag-white");
+            log(`   [INCORRECT] - Press Enter to reveal`, "tag-incorrect");
+        }
+    }
+
+    function changeFontSize(mod) {
+        fontSize = Math.max(10, fontSize + mod);
+        document.getElementById('console').style.fontSize = fontSize + "px";
+    }
+
+    // Event Listeners
+    document.getElementById('user-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') processAnswer();
+    });
+
+</script>
+</body>
+</html>

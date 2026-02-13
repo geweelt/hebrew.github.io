@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew Noun Master</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --masculine: #add8e6;
+            --feminine: #ffb6c1;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #app-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 { color: var(--primary); margin-bottom: 1.5rem; }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:active { transform: scale(0.98); }
+        button:hover { opacity: 0.9; }
+
+        .btn-menu { background: var(--primary); color: white; }
+        .btn-m { background: var(--masculine); color: #333; font-weight: bold; }
+        .btn-f { background: var(--feminine); color: #333; font-weight: bold; }
+        .btn-option { border: 1px solid #ddd; background: white; }
+        .btn-exit { background: #95a5a6; color: white; margin-top: 20px; }
+
+        #word-display { font-size: 3.5rem; font-weight: bold; margin: 20px 0; }
+        #translit-display { font-style: italic; color: #7f8c8d; margin-bottom: 10px; }
+        #meaning-display { font-size: 1.2rem; margin-bottom: 20px; color: #34495e; }
+        #feedback { font-weight: bold; height: 1.5rem; margin: 15px 0; }
+
+        input[type="file"] { margin: 20px 0; }
+        .slider-container { margin: 20px 0; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="view-load">
+        <h1>Hebrew Learning Lab</h1>
+        <p>Please upload your dictionary JSONL file to start.</p>
+        <div id="view-load">
+        <h1>Hebrew Learning Lab</h1>
+        <div class="loader-spinner"></div> <p id="load-status">Connecting to server...</p>
+        </div>
+        <p id="load-status"></p>
+    </div>
+
+    <div id="view-menu" class="hidden">
+        <h1>Hebrew Noun Master</h1>
+        <button class="btn-menu" onclick="startGenderGame()">1. Gender Trainer (m/f)</button>
+        <button class="btn-menu" onclick="showQuizSettings()">2. Word Meaning Quiz</button>
+        <button class="btn-exit" onclick="downloadMistakes()">Download Mistakes (CSV)</button>
+    </div>
+
+    <div id="view-settings" class="hidden">
+        <h2>Quiz Settings</h2>
+        <button class="btn-menu" onclick="startQuiz(false)">Mode: All Dictionary</button>
+        <p style="color: gray;">--- OR ---</p>
+        <div class="slider-container">
+            <label>Subset Size (from random pool of 100): <span id="range-val">20</span></label>
+            <input type="range" id="subset-range" min="5" max="100" value="20" oninput="document.getElementById('range-val').innerText = this.value">
+        </div>
+        <button class="btn-menu" onclick="startQuiz(true)">Mode: Limited Subset</button>
+        <button class="btn-exit" onclick="showView('view-menu')">Back to Menu</button>
+    </div>
+
+    <div id="view-game" class="hidden">
+        <div id="word-display"></div>
+        <div id="translit-display"></div>
+        <div id="meaning-display"></div>
+        
+        <div id="button-zone"></div>
+        
+        <div id="feedback"></div>
+        <button class="btn-exit" onclick="showView('view-menu')">Exit to Menu</button>
+    </div>
+</div>
+
+<script>
+    let allNouns = [];
+    let sessionPool = [];
+    let activeNouns = [];
+    let currentWord = null;
+    let incorrectWords = [];
+    let currentGameMode = ""; // 'gender' or 'quiz'
+
+    // --- File Handling ---
+    // --- Auto-Load from Server ---
+    async function initApp() {
+        const loadStatus = document.getElementById('load-status');
+        loadStatus.innerText = "Loading dictionary...";
+
+        try {
+            const response = await fetch('nouns.jsonl');
+            if (!response.ok) throw new Error("Could not find nouns.jsonl on server");
+            
+            const text = await response.text();
+            const lines = text.split('\n');
+            
+            allNouns = [];
+            lines.forEach(line => {
+                if (line.trim() === "") return;
+                try {
+                    const data = JSON.parse(line);
+                    const senses = data.senses || [{}];
+                    const gloss = (senses[0].glosses || ["No translation"])[0];
+                    
+                    if (data.head_templates && data.head_templates[0].args) {
+                        const args = data.head_templates[0].args;
+                        const gender = args.g;
+                        if (gender === 'm' || gender === 'f') {
+                            allNouns.push({
+                                hebrew: args.wv || data.word,
+                                translit: args.tr || "N/A",
+                                gender: gender,
+                                translation: gloss
+                            });
+                        }
+                    }
+                } catch (err) { /* Skip malformed lines */ }
+            });
+
+            if (allNouns.length > 0) {
+                sessionPool = [...allNouns].sort(() => 0.5 - Math.random()).slice(0, 100);
+                showView('view-menu');
+            } else {
+                loadStatus.innerText = "Error: No nouns found in file.";
+            }
+        } catch (err) {
+            loadStatus.innerText = "Server Error: " + err.message;
+        }
+    }
+
+    // Start the loading process immediately
+    window.onload = initApp;
+    
+    // --- Navigation ---
+    function showView(viewId) {
+        document.querySelectorAll('#app-container > div').forEach(div => div.classList.add('hidden'));
+        document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    // --- Game Logic ---
+    function startGenderGame() {
+        currentGameMode = "gender";
+        activeNouns = allNouns;
+        showView('view-game');
+        nextRound();
+    }
+
+    function showQuizSettings() {
+        showView('view-settings');
+    }
+
+    function startQuiz(limited) {
+        currentGameMode = "quiz";
+        if (limited) {
+            const size = document.getElementById('subset-range').value;
+            activeNouns = sessionPool.slice(0, size);
+        } else {
+            activeNouns = allNouns;
+        }
+        showView('view-game');
+        nextRound();
+    }
+
+    function nextRound() {
+        const feedback = document.getElementById('feedback');
+        feedback.innerText = "Select an answer";
+        feedback.style.color = "black";
+
+        currentWord = activeNouns[Math.floor(Math.random() * activeNouns.length)];
+        
+        document.getElementById('word-display').innerText = currentWord.hebrew;
+        document.getElementById('translit-display').innerText = currentWord.translit;
+        
+        const meaningDisplay = document.getElementById('meaning-display');
+        const buttonZone = document.getElementById('button-zone');
+        buttonZone.innerHTML = "";
+
+        if (currentGameMode === "gender") {
+            meaningDisplay.innerText = `Meaning: ${currentWord.translation}`;
+            
+            const btnM = document.createElement('button');
+            btnM.className = "btn-m";
+            btnM.innerText = "Masculine (m)";
+            btnM.onclick = () => checkAnswer('m');
+            
+            const btnF = document.createElement('button');
+            btnF.className = "btn-f";
+            btnF.innerText = "Feminine (f)";
+            btnF.onclick = () => checkAnswer('f');
+            
+            buttonZone.appendChild(btnM);
+            buttonZone.appendChild(btnF);
+        } else {
+            meaningDisplay.innerText = "What does this mean?";
+            
+            const correct = currentWord.translation;
+            let others = allNouns
+                .filter(n => n.translation !== correct)
+                .map(n => n.translation);
+            
+            // Get 3 random wrong answers
+            let options = [...new Set(others)].sort(() => 0.5 - Math.random()).slice(0, 3);
+            options.push(correct);
+            options.sort(() => 0.5 - Math.random());
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-option";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt);
+                buttonZone.appendChild(btn);
+            });
+        }
+    }
+
+    function checkAnswer(choice) {
+        const answer = currentGameMode === "gender" ? currentWord.gender : currentWord.translation;
+        const feedback = document.getElementById('feedback');
+        
+        // Disable buttons to prevent double clicking
+        const buttons = document.querySelectorAll('#button-zone button');
+        buttons.forEach(b => b.disabled = true);
+
+        if (choice === answer) {
+            feedback.innerText = "✅ Correct!";
+            feedback.style.color = "var(--success)";
+        } else {
+            feedback.innerText = `❌ Wrong! Correct: ${answer}`;
+            feedback.style.color = "var(--error)";
+            logMistake(currentWord);
+        }
+
+        setTimeout(nextRound, 1500);
+    }
+
+    function logMistake(word) {
+        // Prevent duplicates in the session mistake log
+        if (!incorrectWords.find(w => w.hebrew === word.hebrew)) {
+            incorrectWords.push(word);
+        }
+    }
+
+    function downloadMistakes() {
+        if (incorrectWords.length === 0) {
+            alert("No mistakes logged yet!");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,Hebrew,Transliteration,Gender,Translation\n" 
+            + incorrectWords.map(w => `"${w.hebrew}","${w.translit}","${w.gender}","${w.translation}"`).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "incorrect_words.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>
