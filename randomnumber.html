@@ -16,10 +16,10 @@
     <button onclick="
         let num;
         /* 70% chance to pick between 0-150, 30% chance for 150-400 */
-        if (Math.random() < 0.7) {
-            num = Math.random() * 150;
+        if (Math.random() < 0.85) {
+            num = Math.random() * 100;
         } else {
-            num = 150 + (Math.random() * 250);
+            num = 100 + (Math.random() * 300);
         }
         document.getElementById('result').innerText = '₪' + num.toFixed(2);
     ">
