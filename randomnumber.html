@@ -4,14 +4,14 @@
     <title>Weighted Random Number Generator</title>
     <style>
         body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-        #result { font-size: 3rem; font-weight: bold; color: #2c3e50; margin: 20px; } ₪
+        #result { font-size: 3rem; font-weight: bold; color: #2c3e50; margin: 20px; }
         button { padding: 10px 25px; font-size: 1.2rem; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h2>Random Number (0 - 400)</h2>
-    <div id="result">0.00</div> ₪
+    <div id="result">0.00</div> 
     
     <button onclick="
         let num;
@@ -21,7 +21,7 @@
         } else {
             num = 150 + (Math.random() * 250);
         }
-        document.getElementById('result').innerText = num.toFixed(2);
+        document.getElementById('result').innerText = '₪' + num.toFixed(2);
     ">
         Random
     </button>
