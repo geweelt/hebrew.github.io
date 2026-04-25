@@ -96,12 +96,55 @@
     <script>
         let allData = [];
 
-        function parseCSV(text) {
-            const re = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
-            return text.split(/\r?\n(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-                       .filter(line => line.trim() !== "")
-                       .map(line => line.split(re).map(cell => cell.replace(/^"|"$/g, '').trim()));
+    function parseCSV(text) {
+        const result = [];
+        let row = [];
+        let cell = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i++) {
+            let char = text[i];
+
+            if (char === '"') {
+                // Handle escaped quotes ("") inside quoted cells
+                if (inQuotes && text[i + 1] === '"') {
+                    cell += '"';
+                    i++; // Skip the second quote
+                } else {
+                    inQuotes = !inQuotes; // Toggle quote state
+                }
+            } else if (char === ',' && !inQuotes) {
+                // End of cell
+                row.push(cell.trim());
+                cell = '';
+            } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                // End of row
+                if (char === '\r' && text[i + 1] === '\n') {
+                    i++; // Skip the \n in Windows \r\n line breaks
+                }
+                row.push(cell.trim());
+                // Only push the row if it's not completely empty
+                if (row.some(c => c !== '')) {
+                    result.push(row);
+                }
+                row = [];
+                cell = '';
+            } else {
+                // Add character to current cell
+                cell += char;
+            }
         }
+        
+        // Push the final cell/row if the file didn't end with a newline
+        if (cell || row.length > 0) {
+            row.push(cell.trim());
+            if (row.some(c => c !== '')) {
+                result.push(row);
+            }
+        }
+        
+        return result;
+    }
 
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const reader = new FileReader();
